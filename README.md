@@ -1,5 +1,9 @@
 ﻿# Claude Usage Tracker (Windows)
 
+[![Download for Windows](https://img.shields.io/badge/Download-ClaudeUsageTracker.exe-blue?style=for-the-badge&logo=windows)](https://github.com/Kylittleman/ClaudeUsageTracker/releases/latest/download/ClaudeUsageTracker.exe)
+
+*Single exe, no installer. See [Quick start](#quick-start) below.*
+
 A Windows system-tray app that shows your live claude.ai usage - 5-hour and 7-day/weekly
 limits, plus 7-day Opus usage - without opening the Settings > Usage page in a browser.
 
@@ -9,6 +13,17 @@ Inspired by two macOS menu-bar apps:
 
 Built with C# / .NET 8 (WPF) and [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon)
 for the tray icon.
+
+## Quick start
+
+1. **[Download ClaudeUsageTracker.exe](https://github.com/Kylittleman/ClaudeUsageTracker/releases/latest/download/ClaudeUsageTracker.exe)**
+   and run it. It's unsigned, so Windows SmartScreen will likely show "Windows protected
+   your PC" - click **More info -> Run anyway** (this is normal for a small indie tool
+   without a paid code-signing certificate).
+2. It opens Settings automatically on first run. Get your `sessionKey` cookie (see below),
+   paste it in, click **Test & Load Organizations**, pick your org, and **Save**.
+3. It drops into your system tray showing your live 5-hour usage %. Click the icon any time
+   for the full breakdown.
 
 ## How it works
 
@@ -42,7 +57,7 @@ this machine, the same trust boundary the macOS apps get from Keychain.
 - Optional Windows notification when usage crosses 80% / 95%.
 - Optional auto-start at Windows login (adds a `HKCU...\Run` entry - no installer needed).
 
-## Building
+## Building from source
 
 Requires the .NET 8 SDK.
 
@@ -57,8 +72,9 @@ dotnet run
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
-Produces a single self-contained `ClaudeUsageTracker.exe` in `publish/` that runs without
-the .NET SDK/runtime installed (not checked into this repo - build it yourself).
+Produces the same kind of single self-contained `ClaudeUsageTracker.exe` attached to
+[Releases](https://github.com/Kylittleman/ClaudeUsageTracker/releases) - runs without the
+.NET SDK/runtime installed. Not checked into this repo; build it yourself or grab the release.
 
 ## Privacy
 
