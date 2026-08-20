@@ -14,7 +14,7 @@ public partial class PopupWindow : Window
 
     public void ShowUnconfigured()
     {
-        StatusText.Text = "No session key configured. Click the gear icon to set one up.";
+        StatusText.Text = "Not logged in. Click the gear icon to log in with claude.ai.";
         FiveHourLabel.Text = "5-hour: -";
         SevenDayLabel.Text = "7-day: -";
         SevenDayOpusLabel.Text = "7-day Opus: -";
@@ -26,7 +26,7 @@ public partial class PopupWindow : Window
 
     public void ShowSessionExpired()
     {
-        StatusText.Text = "Session expired. Click the gear icon to re-enter your session key.";
+        StatusText.Text = "Session expired. Click the gear icon to log in again.";
     }
 
     public void ShowError(string message)

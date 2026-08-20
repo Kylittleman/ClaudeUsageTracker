@@ -11,8 +11,9 @@ Inspired by two macOS menu-bar apps:
 - [Usage4Claude](https://github.com/f-is-h/Usage4Claude)
 - [Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker)
 
-Built with C# / .NET 8 (WPF) and [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon)
-for the tray icon.
+Built with C# / .NET 8 (WPF), [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon) for
+the tray icon, and [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (a
+real embedded Edge/Chromium engine, built into Windows 11) for talking to claude.ai.
 
 ## Quick start
 
@@ -20,9 +21,10 @@ for the tray icon.
    and run it. It's unsigned, so Windows SmartScreen will likely show "Windows protected
    your PC" - click **More info -> Run anyway** (this is normal for a small indie tool
    without a paid code-signing certificate).
-2. It opens Settings automatically on first run. Get your `sessionKey` cookie (see below),
-   paste it in, click **Test & Load Organizations**, pick your org, and **Save**.
-3. It drops into your system tray showing your live 5-hour usage %. Click the icon any time
+2. It opens Settings automatically on first run. Click **Log in with claude.ai** - a window
+   opens, sign in to claude.ai like you normally would, and it closes itself once you're in.
+3. Pick your organization (auto-loaded after login) and click **Save**.
+4. It drops into your system tray showing your live 5-hour usage %. Click the icon any time
    for the full breakdown.
 
 ## How it works
@@ -34,20 +36,14 @@ claude.ai's own web API directly:
 - `GET https://claude.ai/api/organizations/{org_id}/usage` - returns `five_hour`,
   `seven_day`, and `seven_day_opus` utilization percentages
 
-Both are authenticated with the `sessionKey` cookie claude.ai sets when you log in through
-a browser - the same credential the site itself uses, not a separate API key.
-
-## Getting your session key
-
-1. Open [claude.ai](https://claude.ai) in your browser and sign in.
-2. Open DevTools (F12) -> Application tab -> Cookies -> `https://claude.ai`.
-3. Copy the value of the `sessionKey` cookie (starts with `sk-ant-sid01-...`).
-4. Paste it into this app's Settings window, click **Test & Load Organizations**, pick your
-   org, and click **Save**.
-
-The key is encrypted at rest with Windows DPAPI (`ProtectedData`, `CurrentUser` scope) in
-`%APPDATA%\ClaudeUsageTracker\config.json` - readable only by your Windows user account on
-this machine, the same trust boundary the macOS apps get from Keychain.
+**Why WebView2 instead of a plain HTTP client:** those endpoints sit behind Cloudflare bot
+protection that blocks bare HTTP requests outright - even ones carrying a valid, correctly
+copied session cookie - because it can't run the JS challenge a real browser solves
+automatically. So this app logs in and fetches data through an actual embedded Edge engine
+(WebView2) rather than raw HTTP calls, which is presumably what the macOS apps' "embedded
+browser login" option does too. Your login session is stored in WebView2's own local browser
+profile (`%LOCALAPPDATA%\ClaudeUsageTracker\WebView2`), the same way a real browser stores it
+- not something this app manages or encrypts itself.
 
 ## Features
 
@@ -59,7 +55,8 @@ this machine, the same trust boundary the macOS apps get from Keychain.
 
 ## Building from source
 
-Requires the .NET 8 SDK.
+Requires the .NET 8 SDK. The WebView2 Runtime must be present on the machine (ships with
+Windows 11 by default).
 
 ```
 dotnet build
@@ -78,5 +75,5 @@ Produces the same kind of single self-contained `ClaudeUsageTracker.exe` attache
 
 ## Privacy
 
-Your session key never leaves your machine except in direct HTTPS calls to `claude.ai`.
+This app only talks to `claude.ai` (through the embedded browser component) and nowhere else.
 Nothing is sent anywhere else; there is no telemetry.

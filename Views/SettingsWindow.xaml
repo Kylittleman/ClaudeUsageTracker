@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Claude Usage Tracker - Settings"
-        Height="480" Width="460"
+        Height="440" Width="460"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize">
     <Grid Margin="20">
@@ -18,29 +18,33 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Claude.ai session key" FontWeight="Bold" Margin="0,0,0,4"/>
-        <TextBlock Grid.Row="1" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,6"
-                   Text="Open claude.ai, sign in, open DevTools (F12) - Application - Cookies - claude.ai, copy the 'sessionKey' value (starts with sk-ant-sid01-...), and paste it below."/>
-        <PasswordBox x:Name="SessionKeyBox" Grid.Row="2" Margin="0,0,0,10" Padding="4"/>
+        <TextBlock Grid.Row="0" Text="Account" FontWeight="Bold" Margin="0,0,0,4"/>
+        <DockPanel Grid.Row="1" Margin="0,0,0,14">
+            <Button x:Name="LoginButton" Content="Log in with claude.ai" DockPanel.Dock="Right" Padding="10,4" Click="LoginButton_Click"/>
+            <TextBlock x:Name="LoginStatusText" Text="Checking login status..." VerticalAlignment="Center" Foreground="#555555"/>
+        </DockPanel>
 
-        <TextBlock Grid.Row="3" Text="Organization" FontWeight="Bold" Margin="0,0,0,4"/>
-        <ComboBox x:Name="OrganizationCombo" Grid.Row="4" Margin="0,0,0,10" DisplayMemberPath="Name"/>
+        <TextBlock Grid.Row="2" Text="Organization" FontWeight="Bold" Margin="0,0,0,4"/>
+        <DockPanel Grid.Row="3" Margin="0,0,0,14">
+            <Button x:Name="RefreshOrgsButton" Content="Refresh" DockPanel.Dock="Right" Padding="10,4" Click="RefreshOrgsButton_Click"/>
+            <ComboBox x:Name="OrganizationCombo" Margin="0,0,10,0" DisplayMemberPath="Name"/>
+        </DockPanel>
 
-        <TextBlock Grid.Row="5" Text="Refresh interval (seconds, while active)" FontWeight="Bold" Margin="0,0,0,4"/>
-        <StackPanel Grid.Row="6" Orientation="Horizontal" Margin="0,0,0,10">
+        <TextBlock Grid.Row="4" Text="Refresh interval (seconds, while active)" FontWeight="Bold" Margin="0,0,0,4"/>
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,14">
             <Slider x:Name="IntervalSlider" Width="260" Minimum="30" Maximum="300" TickFrequency="30"
                     IsSnapToTickEnabled="True" ValueChanged="IntervalSlider_ValueChanged"/>
             <TextBlock x:Name="IntervalValueText" VerticalAlignment="Center" Margin="10,0,0,0" Width="40"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="7" VerticalAlignment="Top">
+        <StackPanel Grid.Row="6" Margin="0,0,0,10">
             <CheckBox x:Name="AutoStartCheck" Content="Start automatically when Windows starts" Margin="0,0,0,8"/>
             <CheckBox x:Name="NotifyCheck" Content="Notify me when usage crosses 80% / 95%" Margin="0,0,0,8"/>
-            <TextBlock x:Name="StatusMessage" Foreground="#CF222E" TextWrapping="Wrap" FontSize="11"/>
         </StackPanel>
 
+        <TextBlock x:Name="StatusMessage" Grid.Row="7" Foreground="#CF222E" TextWrapping="Wrap" FontSize="11" VerticalAlignment="Top"/>
+
         <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="TestConnectionButton" Content="Test &amp; Load Organizations" Padding="10,4" Margin="0,0,10,0" Click="TestConnectionButton_Click"/>
             <Button x:Name="SaveButton" Content="Save" Padding="18,4" Click="SaveButton_Click"/>
         </StackPanel>
     </Grid>

@@ -1,56 +1,64 @@
-﻿using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
+﻿using System.Text.Json;
+using System.Windows;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using ClaudeUsageTracker.Models;
 
 namespace ClaudeUsageTracker.Services;
 
 public sealed class ClaudeSessionExpiredException : Exception
 {
-    public HttpStatusCode StatusCode { get; }
-    public string Detail { get; }
-
-    public ClaudeSessionExpiredException(HttpStatusCode statusCode, string detail)
-        : base($"The claude.ai session key was rejected ({(int)statusCode} {statusCode}).")
-    {
-        StatusCode = statusCode;
-        Detail = detail;
-    }
+    public ClaudeSessionExpiredException(string detail)
+        : base($"claude.ai session is missing or expired. {detail}") { }
 }
 
 /// <summary>
-/// Talks directly to claude.ai's own web API using a copied `sessionKey` cookie,
-/// the same mechanism Usage4Claude and Claude-Usage-Tracker use on macOS.
+/// Fetches claude.ai usage data through a hidden, real Edge/Chromium engine (WebView2) instead
+/// of a raw HttpClient. claude.ai's usage endpoints sit behind Cloudflare bot protection that
+/// blocks non-browser HTTP requests outright - even ones carrying a valid, correctly copied
+/// session cookie - but passes automatically for a genuine browser engine like this one.
 /// </summary>
-public sealed class ClaudeApiClient : IDisposable
+public sealed class ClaudeApiClient : IAsyncDisposable
 {
-    private const string UserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+    private Window? _hostWindow;
+    private WebView2? _webView;
+    private readonly SemaphoreSlim _navLock = new(1, 1);
 
-    private readonly HttpClient _http;
-
-    public ClaudeApiClient()
+    public async Task InitializeAsync()
     {
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
-        _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        _http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://claude.ai");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://claude.ai/");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Chromium\";v=\"126\", \"Not.A/Brand\";v=\"24\", \"Google Chrome\";v=\"126\"");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-site", "same-origin");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-mode", "cors");
-        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-dest", "empty");
+        if (_webView is not null) return;
+
+        var environment = await BrowserEnvironment.GetAsync();
+
+        _hostWindow = new Window
+        {
+            Width = 50,
+            Height = 50,
+            Left = -32000,
+            Top = -32000,
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+        };
+
+        _webView = new WebView2();
+        _hostWindow.Content = _webView;
+        _hostWindow.Show();
+
+        await _webView.EnsureCoreWebView2Async(environment);
     }
 
-    public async Task<IReadOnlyList<Organization>> DiscoverOrganizationsAsync(string sessionKey, CancellationToken ct = default)
+    public async Task<bool> IsLoggedInAsync()
     {
-        using var response = await SendAsync(HttpMethod.Get, "https://claude.ai/api/organizations", sessionKey, ct);
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
+        await InitializeAsync();
+        var cookies = await _webView!.CoreWebView2.CookieManager.GetCookiesAsync("https://claude.ai");
+        return cookies.Any(c => c.Name == "sessionKey" && !string.IsNullOrEmpty(c.Value));
+    }
+
+    public async Task<IReadOnlyList<Organization>> DiscoverOrganizationsAsync(CancellationToken ct = default)
+    {
+        var text = await FetchJsonTextAsync("https://claude.ai/api/organizations", ct);
+        using var doc = JsonDocument.Parse(text);
 
         var results = new List<Organization>();
         if (doc.RootElement.ValueKind == JsonValueKind.Array)
@@ -66,11 +74,10 @@ public sealed class ClaudeApiClient : IDisposable
         return results;
     }
 
-    public async Task<UsageSnapshot> GetUsageAsync(string sessionKey, string organizationId, CancellationToken ct = default)
+    public async Task<UsageSnapshot> GetUsageAsync(string organizationId, CancellationToken ct = default)
     {
-        using var response = await SendAsync(HttpMethod.Get, $"https://claude.ai/api/organizations/{organizationId}/usage", sessionKey, ct);
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
+        var text = await FetchJsonTextAsync($"https://claude.ai/api/organizations/{organizationId}/usage", ct);
+        using var doc = JsonDocument.Parse(text);
         var root = doc.RootElement;
 
         return new UsageSnapshot
@@ -82,33 +89,70 @@ public sealed class ClaudeApiClient : IDisposable
         };
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string sessionKey, CancellationToken ct)
+    private async Task<string> FetchJsonTextAsync(string url, CancellationToken ct)
     {
-        using var request = new HttpRequestMessage(method, url);
-        request.Headers.TryAddWithoutValidation("Cookie", $"sessionKey={sessionKey}");
-
-        var response = await _http.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
+        await InitializeAsync();
+        await _navLock.WaitAsync(ct);
+        try
         {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            var snippet = body.Length > 300 ? body[..300] : body;
+            await NavigateAsync(url, ct);
 
-            if (LooksLikeBotChallenge(body))
-                snippet = "(claude.ai returned a bot-check/challenge page instead of JSON - this is not a rejected key, it's the request being blocked before it reached the API.) " + snippet;
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                var text = await GetBodyTextAsync();
+                if (LooksLikeJson(text))
+                    return text;
 
-            response.Dispose();
-            throw new ClaudeSessionExpiredException(response.StatusCode, snippet);
+                // A Cloudflare interstitial resolves itself in a real browser within a few
+                // seconds; give it a moment and check again before giving up.
+                await Task.Delay(1000, ct);
+            }
+
+            throw new ClaudeSessionExpiredException(
+                "claude.ai kept returning a non-JSON (bot-check or login) page instead of usage data. Try logging in again.");
         }
-        return response;
+        finally
+        {
+            _navLock.Release();
+        }
     }
 
-    private static bool LooksLikeBotChallenge(string body)
+    private Task NavigateAsync(string url, CancellationToken ct)
     {
-        var lower = body.ToLowerInvariant();
-        return lower.Contains("cf-browser-verification")
-            || lower.Contains("just a moment")
-            || lower.Contains("attention required")
-            || lower.Contains("<html");
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler(object? s, CoreWebView2NavigationCompletedEventArgs e) => tcs.TrySetResult();
+        _webView!.CoreWebView2.NavigationCompleted += Handler;
+        using var reg = ct.Register(() => tcs.TrySetCanceled(ct));
+
+        try
+        {
+            _webView.CoreWebView2.Navigate(url);
+        }
+        catch
+        {
+            _webView.CoreWebView2.NavigationCompleted -= Handler;
+            throw;
+        }
+
+        return WaitAndUnhook();
+
+        async Task WaitAndUnhook()
+        {
+            try { await tcs.Task; }
+            finally { _webView!.CoreWebView2.NavigationCompleted -= Handler; }
+        }
+    }
+
+    private async Task<string> GetBodyTextAsync()
+    {
+        var raw = await _webView!.CoreWebView2.ExecuteScriptAsync("document.body ? document.body.innerText : ''");
+        return JsonSerializer.Deserialize<string>(raw) ?? "";
+    }
+
+    private static bool LooksLikeJson(string text)
+    {
+        var trimmed = text.TrimStart();
+        return trimmed.StartsWith('{') || trimmed.StartsWith('[');
     }
 
     private static UsageWindow ParseWindow(JsonElement root, string propertyName)
@@ -135,5 +179,10 @@ public sealed class ClaudeApiClient : IDisposable
             ? value.GetString()
             : null;
 
-    public void Dispose() => _http.Dispose();
+    public ValueTask DisposeAsync()
+    {
+        _webView?.Dispose();
+        _hostWindow?.Close();
+        return ValueTask.CompletedTask;
+    }
 }

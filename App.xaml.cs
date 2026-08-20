@@ -17,7 +17,7 @@ public partial class App : Application
     private System.Drawing.Icon? _currentTrayIconHandle;
     private readonly HashSet<string> _notifiedThresholds = new();
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -39,8 +39,22 @@ public partial class App : Application
         _poller.SessionExpired += OnSessionExpired;
         _poller.Error += OnPollerError;
 
+        try
+        {
+            await _client.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Couldn't start the embedded browser component (WebView2) this app needs to talk to claude.ai.\n\n{ex.Message}\n\nMake sure the WebView2 Runtime is installed - it ships with Windows 11 by default, or can be installed from Microsoft's website.",
+                "Claude Usage Tracker", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+            return;
+        }
+
         var settings = _store.Load();
-        if (string.IsNullOrEmpty(_store.GetSessionKey(settings)) || string.IsNullOrEmpty(settings.OrganizationId))
+        var loggedIn = await _client.IsLoggedInAsync();
+        if (!loggedIn || string.IsNullOrEmpty(settings.OrganizationId))
         {
             _popup.ShowUnconfigured();
             OpenSettings();
@@ -175,7 +189,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _poller.Dispose();
-        _client.Dispose();
+        _ = _client.DisposeAsync();
         _trayIcon?.Dispose();
         base.OnExit(e);
     }

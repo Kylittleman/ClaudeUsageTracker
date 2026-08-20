@@ -26,10 +26,6 @@ public partial class SettingsWindow : Window
         AutoStartCheck.IsChecked = _settings.AutoStart;
         NotifyCheck.IsChecked = _settings.NotifyAtThresholds;
 
-        var existingKey = _store.GetSessionKey(_settings);
-        if (!string.IsNullOrEmpty(existingKey))
-            SessionKeyBox.Password = existingKey;
-
         if (!string.IsNullOrEmpty(_settings.OrganizationId))
         {
             _organizations = new List<Organization>
@@ -39,50 +35,69 @@ public partial class SettingsWindow : Window
             OrganizationCombo.ItemsSource = _organizations;
             OrganizationCombo.SelectedIndex = 0;
         }
+
+        Loaded += async (_, _) => await RefreshLoginStatusAsync();
     }
 
-    private void IntervalSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private async Task RefreshLoginStatusAsync()
     {
-        if (IntervalValueText is null) return;
-        IntervalValueText.Text = ((int)e.NewValue).ToString();
-    }
-
-    private async void TestConnectionButton_Click(object sender, RoutedEventArgs e)
-    {
-        var sessionKey = SessionKeyBox.Password.Trim();
-        if (string.IsNullOrEmpty(sessionKey))
+        LoginStatusText.Text = "Checking login status...";
+        try
         {
-            StatusMessage.Foreground = Brushes.Red;
-            StatusMessage.Text = "Paste a session key first.";
-            return;
-        }
+            var loggedIn = await _client.IsLoggedInAsync();
+            LoginStatusText.Text = loggedIn ? "Logged in to claude.ai" : "Not logged in";
+            LoginStatusText.Foreground = loggedIn ? Brushes.SeaGreen : Brushes.Gray;
+            LoginButton.Content = loggedIn ? "Log in as someone else" : "Log in with claude.ai";
 
-        TestConnectionButton.IsEnabled = false;
+            if (loggedIn && _organizations.Count == 0)
+                await LoadOrganizationsAsync();
+        }
+        catch (Exception ex)
+        {
+            LoginStatusText.Text = $"Couldn't check login status: {ex.Message}";
+            LoginStatusText.Foreground = Brushes.Red;
+        }
+    }
+
+    private async void LoginButton_Click(object sender, RoutedEventArgs e)
+    {
+        var loginWindow = new LoginWindow { Owner = this };
+        loginWindow.ShowDialog();
+
+        await RefreshLoginStatusAsync();
+    }
+
+    private async void RefreshOrgsButton_Click(object sender, RoutedEventArgs e) => await LoadOrganizationsAsync();
+
+    private async Task LoadOrganizationsAsync()
+    {
+        RefreshOrgsButton.IsEnabled = false;
         StatusMessage.Foreground = Brushes.Gray;
-        StatusMessage.Text = "Checking...";
+        StatusMessage.Text = "Loading organizations...";
 
         try
         {
-            _organizations = (await _client.DiscoverOrganizationsAsync(sessionKey)).ToList();
+            _organizations = (await _client.DiscoverOrganizationsAsync()).ToList();
             OrganizationCombo.ItemsSource = _organizations;
+
             if (_organizations.Count > 0)
             {
                 var previousId = _settings.OrganizationId;
                 var match = _organizations.FirstOrDefault(o => o.Id == previousId);
                 OrganizationCombo.SelectedItem = match ?? _organizations[0];
-                StatusMessage.Foreground = Brushes.LimeGreen;
-                StatusMessage.Text = $"Found {_organizations.Count} organization(s). Click Save.";
+                StatusMessage.Foreground = Brushes.SeaGreen;
+                StatusMessage.Text = $"Found {_organizations.Count} organization(s).";
             }
             else
             {
                 StatusMessage.Foreground = Brushes.OrangeRed;
-                StatusMessage.Text = "Session key worked but no organizations were found.";
+                StatusMessage.Text = "No organizations were found. Make sure you're logged in.";
             }
         }
         catch (ClaudeSessionExpiredException ex)
         {
             StatusMessage.Foreground = Brushes.Red;
-            StatusMessage.Text = $"Rejected ({(int)ex.StatusCode} {ex.StatusCode}): {ex.Detail}";
+            StatusMessage.Text = ex.Message;
         }
         catch (Exception ex)
         {
@@ -91,28 +106,25 @@ public partial class SettingsWindow : Window
         }
         finally
         {
-            TestConnectionButton.IsEnabled = true;
+            RefreshOrgsButton.IsEnabled = true;
         }
+    }
+
+    private void IntervalSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (IntervalValueText is null) return;
+        IntervalValueText.Text = ((int)e.NewValue).ToString();
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        var sessionKey = SessionKeyBox.Password.Trim();
-        if (string.IsNullOrEmpty(sessionKey))
-        {
-            StatusMessage.Foreground = Brushes.Red;
-            StatusMessage.Text = "A session key is required.";
-            return;
-        }
-
         if (OrganizationCombo.SelectedItem is not Organization selectedOrg)
         {
             StatusMessage.Foreground = Brushes.Red;
-            StatusMessage.Text = "Click \"Test & Load Organizations\" and pick an organization first.";
+            StatusMessage.Text = "Log in and pick an organization first.";
             return;
         }
 
-        _store.SetSessionKey(_settings, sessionKey);
         _settings.OrganizationId = selectedOrg.Id;
         _settings.OrganizationName = selectedOrg.Name;
         _settings.RefreshIntervalSeconds = (int)IntervalSlider.Value;

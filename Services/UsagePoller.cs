@@ -69,14 +69,12 @@ public sealed class UsagePoller : IDisposable
     private async Task PollOnceAsync(CancellationToken ct)
     {
         var settings = _store.Load();
-        var sessionKey = _store.GetSessionKey(settings);
-
-        if (string.IsNullOrEmpty(sessionKey) || string.IsNullOrEmpty(settings.OrganizationId))
+        if (string.IsNullOrEmpty(settings.OrganizationId))
             return;
 
         try
         {
-            var snapshot = await _client.GetUsageAsync(sessionKey, settings.OrganizationId, ct);
+            var snapshot = await _client.GetUsageAsync(settings.OrganizationId, ct);
             SnapshotReceived?.Invoke(this, snapshot);
         }
         catch (ClaudeSessionExpiredException)
