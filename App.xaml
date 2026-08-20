@@ -4,6 +4,11 @@
              xmlns:tb="http://www.hardcodet.net/taskbar"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <tb:TaskbarIcon x:Key="TrayIcon" x:Name="TrayIcon" ToolTipText="Claude Usage Tracker" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/ModernStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <tb:TaskbarIcon x:Key="TrayIcon" x:Name="TrayIcon" ToolTipText="Claude Usage Tracker" />
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -21,6 +21,14 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        var themeDict = new ResourceDictionary
+        {
+            Source = new Uri(
+                WindowGlass.IsLightTheme() ? "Resources/LightTheme.xaml" : "Resources/DarkTheme.xaml",
+                UriKind.Relative)
+        };
+        Resources.MergedDictionaries.Add(themeDict);
+
         _store = new CredentialStore();
         _client = new ClaudeApiClient();
         _poller = new UsagePoller(_client, _store);

@@ -2,52 +2,98 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Claude Usage"
-        Height="270" Width="300"
+        Height="366" Width="332"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Topmost="True"
-        Background="#1E1E1E"
-        BorderBrush="#3C3C3C"
-        BorderThickness="1"
-        Deactivated="Window_Deactivated">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        AllowsTransparency="True"
+        Background="Transparent"
+        Deactivated="Window_Deactivated"
+        IsVisibleChanged="Window_IsVisibleChanged">
+    <Border x:Name="GlassCard" CornerRadius="18" Margin="16"
+            Background="{DynamicResource GlassOverlayBrush}"
+            BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="28" ShadowDepth="6" Opacity="0.35" Direction="270"/>
+        </Border.Effect>
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="CardSlide" Y="14"/>
+        </Border.RenderTransform>
 
-        <DockPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="Claude Usage" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-            <Button x:Name="SettingsButton" Content="&#9881;" DockPanel.Dock="Right" Width="28" Height="28"
-                    Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14"
-                    Click="SettingsButton_Click" Cursor="Hand"/>
-            <ToggleButton x:Name="PinButton" Content="&#128204;" DockPanel.Dock="Right" Width="28" Height="28"
-                    Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14"
-                    Click="PinButton_Click" Cursor="Hand" ToolTip="Keep this window open on screen"/>
-        </DockPanel>
+        <Grid Margin="20,18,20,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="1" Margin="0,0,0,10">
-            <TextBlock x:Name="FiveHourLabel" Text="5-hour: -" Foreground="#CCCCCC" FontSize="12"/>
-            <ProgressBar x:Name="FiveHourBar" Height="8" Margin="0,4,0,0" Minimum="0" Maximum="100"/>
-        </StackPanel>
+            <DockPanel Grid.Row="0" Margin="0,0,0,20">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="{StaticResource AccentBrush}" Margin="0,0,8,0"/>
+                    <TextBlock Text="Claude Usage" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                    <ToggleButton x:Name="PinButton" Content="&#128204;" Style="{StaticResource IconToggleButtonStyle}"
+                                  Click="PinButton_Click" ToolTip="Keep this window open on screen"/>
+                    <Button x:Name="SettingsButton" Content="&#9881;" Style="{StaticResource IconButtonStyle}"
+                            Click="SettingsButton_Click" ToolTip="Settings"/>
+                </StackPanel>
+            </DockPanel>
 
-        <StackPanel Grid.Row="2" Margin="0,0,0,10">
-            <TextBlock x:Name="SevenDayLabel" Text="7-day: -" Foreground="#CCCCCC" FontSize="12"/>
-            <ProgressBar x:Name="SevenDayBar" Height="8" Margin="0,4,0,0" Minimum="0" Maximum="100"/>
-        </StackPanel>
+            <StackPanel Grid.Row="1" Margin="0,0,0,18">
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Text="5-hour" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    <TextBlock x:Name="FiveHourPctText" Text="0%" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryTextBrush}" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <Border Width="260" HorizontalAlignment="Left" Height="8" CornerRadius="4"
+                        Background="{DynamicResource TrackBrush}" ClipToBounds="True">
+                    <Border x:Name="FiveHourFill" Width="0" HorizontalAlignment="Left" CornerRadius="4"
+                            Background="{StaticResource AccentGradientBrush}"/>
+                </Border>
+                <TextBlock x:Name="FiveHourResetText" Text="" FontSize="11"
+                           Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,6,0,0"/>
+            </StackPanel>
 
-        <StackPanel Grid.Row="3" Margin="0,0,0,10">
-            <TextBlock x:Name="SevenDayOpusLabel" Text="7-day Opus: -" Foreground="#CCCCCC" FontSize="12"/>
-            <ProgressBar x:Name="SevenDayOpusBar" Height="8" Margin="0,4,0,0" Minimum="0" Maximum="100"/>
-        </StackPanel>
+            <StackPanel Grid.Row="2" Margin="0,0,0,18">
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Text="7-day" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    <TextBlock x:Name="SevenDayPctText" Text="0%" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryTextBrush}" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <Border Width="260" HorizontalAlignment="Left" Height="8" CornerRadius="4"
+                        Background="{DynamicResource TrackBrush}" ClipToBounds="True">
+                    <Border x:Name="SevenDayFill" Width="0" HorizontalAlignment="Left" CornerRadius="4"
+                            Background="{StaticResource AccentGradientBrush}"/>
+                </Border>
+                <TextBlock x:Name="SevenDayResetText" Text="" FontSize="11"
+                           Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,6,0,0"/>
+            </StackPanel>
 
-        <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="#F0A020" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Bottom"/>
+            <StackPanel Grid.Row="3" Margin="0,0,0,4">
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Text="7-day Opus" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    <TextBlock x:Name="SevenDayOpusPctText" Text="0%" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryTextBrush}" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                </DockPanel>
+                <Border Width="260" HorizontalAlignment="Left" Height="8" CornerRadius="4"
+                        Background="{DynamicResource TrackBrush}" ClipToBounds="True">
+                    <Border x:Name="SevenDayOpusFill" Width="0" HorizontalAlignment="Left" CornerRadius="4"
+                            Background="{StaticResource AccentGradientBrush}"/>
+                </Border>
+                <TextBlock x:Name="SevenDayOpusResetText" Text="" FontSize="11"
+                           Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,6,0,0"/>
+            </StackPanel>
 
-        <TextBlock x:Name="LastRefreshedText" Grid.Row="5" Text="" Foreground="#888888" FontSize="10" Margin="0,10,0,0"/>
-    </Grid>
+            <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="{StaticResource AccentBrush}" FontSize="12"
+                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+
+            <TextBlock x:Name="LastRefreshedText" Grid.Row="5" Text="" FontSize="11"
+                       Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,14,0,0"/>
+        </Grid>
+    </Border>
 </Window>

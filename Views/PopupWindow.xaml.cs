@@ -1,4 +1,6 @@
 ﻿using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using ClaudeUsageTracker.Models;
 using ClaudeUsageTracker.Services;
 
@@ -6,6 +8,8 @@ namespace ClaudeUsageTracker.Views;
 
 public partial class PopupWindow : Window
 {
+    private const double TrackWidth = 260;
+
     private readonly CredentialStore _store;
     private bool _isPinned;
 
@@ -18,7 +22,12 @@ public partial class PopupWindow : Window
 
         _isPinned = _store.Load().PinPopup;
         PinButton.IsChecked = _isPinned;
-        UpdatePinVisual();
+
+        SourceInitialized += (_, _) =>
+        {
+            var tint = (Color)FindResource("GlassTintColor");
+            WindowGlass.EnableAcrylic(this, tint, opacity: 190);
+        };
     }
 
     public bool IsPinned => _isPinned;
@@ -26,12 +35,15 @@ public partial class PopupWindow : Window
     public void ShowUnconfigured()
     {
         StatusText.Text = "Not logged in. Click the gear icon to log in with claude.ai.";
-        FiveHourLabel.Text = "5-hour: -";
-        SevenDayLabel.Text = "7-day: -";
-        SevenDayOpusLabel.Text = "7-day Opus: -";
-        FiveHourBar.Value = 0;
-        SevenDayBar.Value = 0;
-        SevenDayOpusBar.Value = 0;
+        FiveHourPctText.Text = "-";
+        SevenDayPctText.Text = "-";
+        SevenDayOpusPctText.Text = "-";
+        AnimateBar(FiveHourFill, 0);
+        AnimateBar(SevenDayFill, 0);
+        AnimateBar(SevenDayOpusFill, 0);
+        FiveHourResetText.Text = "";
+        SevenDayResetText.Text = "";
+        SevenDayOpusResetText.Text = "";
         LastRefreshedText.Text = "";
     }
 
@@ -49,26 +61,41 @@ public partial class PopupWindow : Window
     {
         StatusText.Text = "";
 
-        FiveHourBar.Value = snapshot.FiveHour.UtilizationPct;
-        FiveHourLabel.Text = $"5-hour: {snapshot.FiveHour.UtilizationPct:0}%{FormatReset(snapshot.FiveHour.ResetAt)}";
+        FiveHourPctText.Text = $"{snapshot.FiveHour.UtilizationPct:0}%";
+        AnimateBar(FiveHourFill, snapshot.FiveHour.UtilizationPct);
+        FiveHourResetText.Text = FormatReset(snapshot.FiveHour.ResetAt);
 
-        SevenDayBar.Value = snapshot.SevenDay.UtilizationPct;
-        SevenDayLabel.Text = $"7-day: {snapshot.SevenDay.UtilizationPct:0}%{FormatReset(snapshot.SevenDay.ResetAt)}";
+        SevenDayPctText.Text = $"{snapshot.SevenDay.UtilizationPct:0}%";
+        AnimateBar(SevenDayFill, snapshot.SevenDay.UtilizationPct);
+        SevenDayResetText.Text = FormatReset(snapshot.SevenDay.ResetAt);
 
-        SevenDayOpusBar.Value = snapshot.SevenDayOpus.UtilizationPct;
-        SevenDayOpusLabel.Text = $"7-day Opus: {snapshot.SevenDayOpus.UtilizationPct:0}%{FormatReset(snapshot.SevenDayOpus.ResetAt)}";
+        SevenDayOpusPctText.Text = $"{snapshot.SevenDayOpus.UtilizationPct:0}%";
+        AnimateBar(SevenDayOpusFill, snapshot.SevenDayOpus.UtilizationPct);
+        SevenDayOpusResetText.Text = FormatReset(snapshot.SevenDayOpus.ResetAt);
 
         LastRefreshedText.Text = $"Last updated {snapshot.LastRefreshed:t}";
+    }
+
+    private static void AnimateBar(FrameworkElement fill, double pct)
+    {
+        var targetWidth = Math.Clamp(pct / 100.0, 0, 1) * TrackWidth;
+        var animation = new DoubleAnimation
+        {
+            To = targetWidth,
+            Duration = TimeSpan.FromMilliseconds(550),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        fill.BeginAnimation(WidthProperty, animation);
     }
 
     private static string FormatReset(DateTimeOffset? resetAt)
     {
         if (resetAt is null) return "";
         var remaining = resetAt.Value - DateTimeOffset.Now;
-        if (remaining <= TimeSpan.Zero) return " (resetting...)";
+        if (remaining <= TimeSpan.Zero) return "Resetting...";
         return remaining.TotalHours >= 1
-            ? $" (resets in {(int)remaining.TotalHours}h {remaining.Minutes}m)"
-            : $" (resets in {remaining.Minutes}m)";
+            ? $"Resets in {(int)remaining.TotalHours}h {remaining.Minutes}m"
+            : $"Resets in {remaining.Minutes}m";
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -80,15 +107,30 @@ public partial class PopupWindow : Window
         var settings = _store.Load();
         settings.PinPopup = _isPinned;
         _store.Save(settings);
-
-        UpdatePinVisual();
     }
-
-    private void UpdatePinVisual() => PinButton.Opacity = _isPinned ? 1.0 : 0.55;
 
     private void Window_Deactivated(object? sender, EventArgs e)
     {
         if (!_isPinned) Hide();
+    }
+
+    private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is not true) return;
+
+        Opacity = 0;
+        CardSlide.Y = 14;
+
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        var slide = new DoubleAnimation(14, 0, TimeSpan.FromMilliseconds(280))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        BeginAnimation(OpacityProperty, fade);
+        CardSlide.BeginAnimation(TranslateTransform.YProperty, slide);
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
