@@ -1,8 +1,11 @@
 ﻿# Claude Usage Tracker (Windows)
 
 [![Download for Windows](https://img.shields.io/badge/Download-ClaudeUsageTracker.exe-blue?style=for-the-badge&logo=windows)](https://github.com/Kylittleman/ClaudeUsageTracker/releases/latest/download/ClaudeUsageTracker.exe)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
 *Single exe, no installer. See [Quick start](#quick-start) below.*
+
+<img src="docs/screenshot.png" alt="Claude Usage Tracker popup" width="360">
 
 A Windows system-tray app that shows your live claude.ai usage - 5-hour and 7-day/weekly
 limits, plus 7-day Opus usage - without opening the Settings > Usage page in a browser.
@@ -22,14 +25,32 @@ not the default flat WPF look.
 ## Quick start
 
 1. **[Download ClaudeUsageTracker.exe](https://github.com/Kylittleman/ClaudeUsageTracker/releases/latest/download/ClaudeUsageTracker.exe)**
-   and run it. It's unsigned, so Windows SmartScreen will likely show "Windows protected
-   your PC" - click **More info -> Run anyway** (this is normal for a small indie tool
-   without a paid code-signing certificate).
+   and run it. See [About the Windows SmartScreen warning](#about-the-windows-smartscreen-warning)
+   below - it's expected and safe to click through.
 2. It opens Settings automatically on first run. Click **Log in with claude.ai** - a window
    opens, sign in to claude.ai like you normally would, and it closes itself once you're in.
 3. Pick your organization (auto-loaded after login) and click **Save**.
 4. It drops into your system tray showing your live 5-hour usage %. Click the icon any time
    for the full breakdown.
+
+## About the Windows SmartScreen warning
+
+When you run the downloaded exe, Windows will show **"Windows protected your PC"** with an
+"Unknown publisher" warning. This is expected, and here's exactly why:
+
+Windows SmartScreen doesn't scan for malicious *behavior* here - it just checks whether an exe
+is signed with a paid code-signing certificate ($100s/year) and has enough download history to
+have built up "reputation." A brand-new indie tool distributed for free on GitHub has neither,
+regardless of what the code actually does. It's a trust-of-publisher signal, not a virus scan
+result.
+
+To proceed: click **More info**, then **Run anyway**.
+
+If you'd rather not take that on faith, the source is entirely in this repo - every network
+call it makes is in [`Services/ClaudeApiClient.cs`](Services/ClaudeApiClient.cs) (only talks to
+`claude.ai`, nothing else), and you can [build it yourself](#building-from-source) from source
+instead of using the prebuilt release, which sidesteps the warning entirely since Windows only
+flags files downloaded from the internet, not ones you compiled locally.
 
 ## How it works
 
@@ -90,3 +111,7 @@ where it stopped.
 
 This app only talks to `claude.ai` (through the embedded browser component) and nowhere else.
 Nothing is sent anywhere else; there is no telemetry.
+
+## License
+
+[MIT](LICENSE) - free to use, modify, and distribute.
