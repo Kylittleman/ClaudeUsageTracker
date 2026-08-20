@@ -27,6 +27,7 @@ public partial class PopupWindow : Window
         {
             var tint = (Color)FindResource("GlassTintColor");
             WindowGlass.EnableAcrylic(this, tint, opacity: 190);
+            WindowGlass.ApplyRoundedCorners(this, Width, Height, cornerRadius: 18);
         };
     }
 

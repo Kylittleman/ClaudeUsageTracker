@@ -68,6 +68,33 @@ public static class WindowGlass
         }
     }
 
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int cellWidth, int cellHeight);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+    /// <summary>
+    /// Clips the window's actual OS-level shape to a rounded rectangle, so nothing - not even
+    /// DWM's acrylic blur-behind, which otherwise fills the whole rectangular window regardless
+    /// of WPF's own transparent regions - renders outside the rounded card.
+    /// </summary>
+    public static void ApplyRoundedCorners(Window window, double width, double height, double cornerRadius)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        var source = PresentationSource.FromVisual(window);
+        var dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+
+        var w = (int)Math.Round(width * dpiScale);
+        var h = (int)Math.Round(height * dpiScale);
+        var d = (int)Math.Round(cornerRadius * dpiScale * 2);
+
+        var region = CreateRoundRectRgn(0, 0, w, h, d, d);
+        SetWindowRgn(hwnd, region, true);
+    }
+
     /// <summary>True if Windows apps are currently set to light mode.</summary>
     public static bool IsLightTheme()
     {
