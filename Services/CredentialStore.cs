@@ -10,6 +10,7 @@ public sealed class AppSettings
     public int RefreshIntervalSeconds { get; set; } = 60;
     public bool AutoStart { get; set; } = true;
     public bool NotifyAtThresholds { get; set; } = true;
+    public bool PinPopup { get; set; } = false;
 }
 
 /// <summary>

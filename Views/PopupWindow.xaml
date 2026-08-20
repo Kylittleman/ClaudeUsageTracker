@@ -26,6 +26,9 @@
             <Button x:Name="SettingsButton" Content="&#9881;" DockPanel.Dock="Right" Width="28" Height="28"
                     Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14"
                     Click="SettingsButton_Click" Cursor="Hand"/>
+            <ToggleButton x:Name="PinButton" Content="&#128204;" DockPanel.Dock="Right" Width="28" Height="28"
+                    Background="Transparent" BorderThickness="0" Foreground="White" FontSize="14"
+                    Click="PinButton_Click" Cursor="Hand" ToolTip="Keep this window open on screen"/>
         </DockPanel>
 
         <StackPanel Grid.Row="1" Margin="0,0,0,10">

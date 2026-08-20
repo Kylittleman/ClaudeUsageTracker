@@ -32,7 +32,7 @@ public partial class App : Application
         SetTrayIcon(TrayIconRenderer.Render(0, isError: true));
         _trayIcon.ForceCreate();
 
-        _popup = new PopupWindow();
+        _popup = new PopupWindow(_store);
         _popup.SettingsRequested += (_, _) => OpenSettings();
 
         _poller.SnapshotReceived += OnSnapshotReceived;
@@ -58,6 +58,11 @@ public partial class App : Application
         {
             _popup.ShowUnconfigured();
             OpenSettings();
+        }
+        else if (settings.PinPopup)
+        {
+            PositionPopupNearTray();
+            _popup.Show();
         }
 
         _poller.Start();

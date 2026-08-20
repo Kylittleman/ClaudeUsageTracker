@@ -49,6 +49,8 @@ profile (`%LOCALAPPDATA%\ClaudeUsageTracker\WebView2`), the same way a real brow
 
 - Tray icon shows your current 5-hour usage % directly (green/amber/red).
 - Click the tray icon for a popup with all three usage bars and reset countdowns.
+- Click the pin icon (top-right of the popup) to keep it open on screen permanently, instead
+  of it closing when you click away - it'll stay pinned across restarts too.
 - Adaptive refresh: faster while you're actively checking, slower when idle.
 - Optional Windows notification when usage crosses 80% / 95%.
 - Optional auto-start at Windows login (adds a `HKCU...\Run` entry - no installer needed).

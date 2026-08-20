@@ -1,16 +1,27 @@
 ﻿using System.Windows;
 using ClaudeUsageTracker.Models;
+using ClaudeUsageTracker.Services;
 
 namespace ClaudeUsageTracker.Views;
 
 public partial class PopupWindow : Window
 {
+    private readonly CredentialStore _store;
+    private bool _isPinned;
+
     public event EventHandler? SettingsRequested;
 
-    public PopupWindow()
+    public PopupWindow(CredentialStore store)
     {
         InitializeComponent();
+        _store = store;
+
+        _isPinned = _store.Load().PinPopup;
+        PinButton.IsChecked = _isPinned;
+        UpdatePinVisual();
     }
+
+    public bool IsPinned => _isPinned;
 
     public void ShowUnconfigured()
     {
@@ -62,7 +73,23 @@ public partial class PopupWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke(this, EventArgs.Empty);
 
-    private void Window_Deactivated(object? sender, EventArgs e) => Hide();
+    private void PinButton_Click(object sender, RoutedEventArgs e)
+    {
+        _isPinned = PinButton.IsChecked == true;
+
+        var settings = _store.Load();
+        settings.PinPopup = _isPinned;
+        _store.Save(settings);
+
+        UpdatePinVisual();
+    }
+
+    private void UpdatePinVisual() => PinButton.Opacity = _isPinned ? 1.0 : 0.55;
+
+    private void Window_Deactivated(object? sender, EventArgs e)
+    {
+        if (!_isPinned) Hide();
+    }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
