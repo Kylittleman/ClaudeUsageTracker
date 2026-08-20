@@ -18,7 +18,7 @@ Built with C# / .NET 8 (WPF), [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.No
 the tray icon, and [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (a
 real embedded Edge/Chromium engine, built into Windows 11) for talking to claude.ai.
 
-The popup and settings windows use a frosted-glass (acrylic) design that auto-matches your
+The popup and settings windows use a translucent rounded-card design that auto-matches your
 Windows light/dark theme, with animated progress bars and a Claude-branded accent color -
 not the default flat WPF look.
 
