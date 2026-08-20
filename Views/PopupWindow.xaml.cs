@@ -25,8 +25,6 @@ public partial class PopupWindow : Window
 
         SourceInitialized += (_, _) =>
         {
-            var tint = (Color)FindResource("GlassTintColor");
-            WindowGlass.EnableAcrylic(this, tint, opacity: 190);
             WindowGlass.ApplyRoundedCorners(this, Width, Height, cornerRadius: 18);
         };
     }
@@ -118,6 +116,11 @@ public partial class PopupWindow : Window
     private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is not true) return;
+
+        // Recompute the rounded-corner clip on every show, not just once at window creation -
+        // the window may not have been on its final monitor (with its final DPI) yet back at
+        // SourceInitialized time.
+        WindowGlass.ApplyRoundedCorners(this, Width, Height, cornerRadius: 18);
 
         Opacity = 0;
         CardSlide.Y = 14;

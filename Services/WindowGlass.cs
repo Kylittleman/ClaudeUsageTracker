@@ -7,67 +7,20 @@ using Microsoft.Win32;
 namespace ClaudeUsageTracker.Services;
 
 /// <summary>
-/// Applies real Windows acrylic blur-behind to a WPF window (the frosted-glass effect seen
-/// throughout Windows 11) and detects whether the system is in light or dark mode, so windows
-/// can match the user's Windows theme instead of hardcoding one look.
+/// Clips a WPF window's true OS-level shape to a rounded rectangle, and detects whether the
+/// system is in light or dark mode, so windows can match the user's Windows theme.
+///
+/// Deliberately does NOT use DWM's acrylic blur-behind (SetWindowCompositionAttribute /
+/// ACCENT_ENABLE_ACRYLICBLURBEHIND): that legacy, undocumented API paints its blur+tint across
+/// the *entire rectangular window* at the DWM compositor level, and does not respect
+/// SetWindowRgn clipping on current Windows 11 builds - confirmed by testing, not assumed -
+/// which is what caused the reported "gray square around the rounded card" bug. Relying purely
+/// on WPF's own AllowsTransparency=True per-pixel alpha rendering (a well-supported, ordinary
+/// WPF feature, not an OS/undocumented-API edge case) is what actually guarantees clean rounded
+/// corners with nothing showing outside them.
 /// </summary>
 public static class WindowGlass
 {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct AccentPolicy
-    {
-        public int AccentState;
-        public int AccentFlags;
-        public int GradientColor;
-        public int AnimationId;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct WindowCompositionAttributeData
-    {
-        public int Attribute;
-        public IntPtr Data;
-        public int SizeOfData;
-    }
-
-    private const int AccentEnableAcrylicBlurBehind = 4;
-    private const int WcaAccentPolicy = 19;
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
-
-    /// <summary>Enables acrylic blur-behind, tinted with the given color/opacity (0-255).</summary>
-    public static void EnableAcrylic(Window window, Color tintColor, byte opacity)
-    {
-        var hwnd = new WindowInteropHelper(window).Handle;
-        if (hwnd == IntPtr.Zero) return;
-
-        var gradientColor = (opacity << 24) | (tintColor.B << 16) | (tintColor.G << 8) | tintColor.R;
-        var accent = new AccentPolicy
-        {
-            AccentState = AccentEnableAcrylicBlurBehind,
-            GradientColor = gradientColor,
-        };
-
-        var accentSize = Marshal.SizeOf(accent);
-        var accentPtr = Marshal.AllocHGlobal(accentSize);
-        try
-        {
-            Marshal.StructureToPtr(accent, accentPtr, false);
-            var data = new WindowCompositionAttributeData
-            {
-                Attribute = WcaAccentPolicy,
-                SizeOfData = accentSize,
-                Data = accentPtr,
-            };
-            SetWindowCompositionAttribute(hwnd, ref data);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(accentPtr);
-        }
-    }
-
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int cellWidth, int cellHeight);
 
@@ -75,21 +28,22 @@ public static class WindowGlass
     private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
 
     /// <summary>
-    /// Clips the window's actual OS-level shape to a rounded rectangle, so nothing - not even
-    /// DWM's acrylic blur-behind, which otherwise fills the whole rectangular window regardless
-    /// of WPF's own transparent regions - renders outside the rounded card.
+    /// Clips the window's actual OS-level shape to a rounded rectangle, as a defense-in-depth
+    /// guarantee alongside WPF's own transparent-corner rendering.
     /// </summary>
     public static void ApplyRoundedCorners(Window window, double width, double height, double cornerRadius)
     {
         var hwnd = new WindowInteropHelper(window).Handle;
         if (hwnd == IntPtr.Zero) return;
 
-        var source = PresentationSource.FromVisual(window);
-        var dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+        var dpi = VisualTreeHelper.GetDpi(window);
+        var scaleX = dpi.DpiScaleX;
+        var scaleY = dpi.DpiScaleY;
 
-        var w = (int)Math.Round(width * dpiScale);
-        var h = (int)Math.Round(height * dpiScale);
-        var d = (int)Math.Round(cornerRadius * dpiScale * 2);
+        var w = (int)Math.Ceiling(width * scaleX);
+        var h = (int)Math.Ceiling(height * scaleY);
+        var radiusPhysical = cornerRadius * Math.Max(scaleX, scaleY);
+        var d = (int)Math.Ceiling(radiusPhysical * 2);
 
         var region = CreateRoundRectRgn(0, 0, w, h, d, d);
         SetWindowRgn(hwnd, region, true);
