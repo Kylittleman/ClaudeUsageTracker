@@ -22,11 +22,6 @@ public partial class PopupWindow : Window
 
         _isPinned = _store.Load().PinPopup;
         PinButton.IsChecked = _isPinned;
-
-        SourceInitialized += (_, _) =>
-        {
-            WindowGlass.ApplyRoundedCorners(this, Width, Height, cornerRadius: 18);
-        };
     }
 
     public bool IsPinned => _isPinned;
@@ -116,11 +111,6 @@ public partial class PopupWindow : Window
     private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is not true) return;
-
-        // Recompute the rounded-corner clip on every show, not just once at window creation -
-        // the window may not have been on its final monitor (with its final DPI) yet back at
-        // SourceInitialized time.
-        WindowGlass.ApplyRoundedCorners(this, Width, Height, cornerRadius: 18);
 
         Opacity = 0;
         CardSlide.Y = 14;
