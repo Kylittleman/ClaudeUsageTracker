@@ -151,4 +151,30 @@
         </Setter>
     </Style>
 
+    <!-- Modern circular radio button, used for the Solid/Clear appearance picker -->
+    <Style x:Key="ModernRadioButtonStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal">
+                        <Grid Width="18" Height="18" VerticalAlignment="Center">
+                            <Ellipse x:Name="Ring" Stroke="{DynamicResource BorderBrush2}" StrokeThickness="1.5"/>
+                            <Ellipse x:Name="Dot" Width="9" Height="9" Fill="{StaticResource AccentBrush}" Opacity="0"/>
+                        </Grid>
+                        <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="Dot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

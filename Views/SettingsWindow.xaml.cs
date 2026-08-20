@@ -25,6 +25,8 @@ public partial class SettingsWindow : Window
         IntervalValueText.Text = _settings.RefreshIntervalSeconds.ToString();
         AutoStartCheck.IsChecked = _settings.AutoStart;
         NotifyCheck.IsChecked = _settings.NotifyAtThresholds;
+        ClearStyleRadio.IsChecked = _settings.ClearGlassMode;
+        SolidStyleRadio.IsChecked = !_settings.ClearGlassMode;
 
         if (!string.IsNullOrEmpty(_settings.OrganizationId))
         {
@@ -133,6 +135,7 @@ public partial class SettingsWindow : Window
         _settings.RefreshIntervalSeconds = (int)IntervalSlider.Value;
         _settings.AutoStart = AutoStartCheck.IsChecked == true;
         _settings.NotifyAtThresholds = NotifyCheck.IsChecked == true;
+        _settings.ClearGlassMode = ClearStyleRadio.IsChecked == true;
         _store.Save(_settings);
         DebugLog.Write($"SettingsWindow: saved org={_settings.OrganizationId} ({_settings.OrganizationName}), interval={_settings.RefreshIntervalSeconds}s, autoStart={_settings.AutoStart}");
 

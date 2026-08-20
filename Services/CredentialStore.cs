@@ -11,6 +11,7 @@ public sealed class AppSettings
     public bool AutoStart { get; set; } = true;
     public bool NotifyAtThresholds { get; set; } = true;
     public bool PinPopup { get; set; } = false;
+    public bool ClearGlassMode { get; set; } = false;
 }
 
 /// <summary>

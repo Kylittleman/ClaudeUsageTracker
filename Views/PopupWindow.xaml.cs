@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using ClaudeUsageTracker.Models;
 using ClaudeUsageTracker.Services;
 
@@ -31,13 +32,10 @@ public partial class PopupWindow : Window
         StatusText.Text = "Not logged in. Click the gear icon to log in with claude.ai.";
         FiveHourPctText.Text = "-";
         SevenDayPctText.Text = "-";
-        SevenDayOpusPctText.Text = "-";
         AnimateBar(FiveHourFill, 0);
         AnimateBar(SevenDayFill, 0);
-        AnimateBar(SevenDayOpusFill, 0);
         FiveHourResetText.Text = "";
         SevenDayResetText.Text = "";
-        SevenDayOpusResetText.Text = "";
         LastRefreshedText.Text = "";
     }
 
@@ -62,10 +60,6 @@ public partial class PopupWindow : Window
         SevenDayPctText.Text = $"{snapshot.SevenDay.UtilizationPct:0}%";
         AnimateBar(SevenDayFill, snapshot.SevenDay.UtilizationPct);
         SevenDayResetText.Text = FormatReset(snapshot.SevenDay.ResetAt);
-
-        SevenDayOpusPctText.Text = $"{snapshot.SevenDayOpus.UtilizationPct:0}%";
-        AnimateBar(SevenDayOpusFill, snapshot.SevenDayOpus.UtilizationPct);
-        SevenDayOpusResetText.Text = FormatReset(snapshot.SevenDayOpus.ResetAt);
 
         LastRefreshedText.Text = $"Last updated {snapshot.LastRefreshed:t}";
     }
@@ -108,9 +102,57 @@ public partial class PopupWindow : Window
         if (!_isPinned) Hide();
     }
 
+    /// <summary>
+    /// "Clear" is a deliberately different visual language from "Solid", not just a lower-alpha
+    /// version of it: a truly see-through surface can land over any arbitrary desktop content,
+    /// so it can't rely on the comfortable light/dark theme-matched text contrast Solid mode
+    /// gets from its near-opaque tint. Clear mode instead uses a fixed white-text-with-shadow
+    /// treatment (the same trick game overlays and photo-widget UIs use for legibility over
+    /// unknown backgrounds), a brighter rim to define the otherwise-invisible edge, and a top
+    /// highlight gradient suggesting light catching a curved glass surface.
+    /// </summary>
+    private void ApplyAppearance()
+    {
+        var clear = _store.Load().ClearGlassMode;
+
+        if (clear)
+        {
+            Resources["PrimaryTextBrush"] = Brushes.White;
+            Resources["SecondaryTextBrush"] = new SolidColorBrush(Color.FromArgb(204, 255, 255, 255));
+            Resources["TertiaryTextBrush"] = new SolidColorBrush(Color.FromArgb(140, 255, 255, 255));
+            Resources["TrackBrush"] = new SolidColorBrush(Color.FromArgb(46, 255, 255, 255));
+
+            GlassCard.Background = new SolidColorBrush(Color.FromArgb(34, 0, 0, 0));
+            GlassCard.BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255));
+            HighlightOverlay.Visibility = Visibility.Visible;
+            ContentGrid.Effect = new DropShadowEffect
+            {
+                Color = Colors.Black,
+                BlurRadius = 6,
+                ShadowDepth = 1,
+                Direction = 270,
+                Opacity = 0.6,
+            };
+        }
+        else
+        {
+            Resources.Remove("PrimaryTextBrush");
+            Resources.Remove("SecondaryTextBrush");
+            Resources.Remove("TertiaryTextBrush");
+            Resources.Remove("TrackBrush");
+
+            GlassCard.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "GlassOverlayBrush");
+            GlassCard.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "BorderBrush2");
+            HighlightOverlay.Visibility = Visibility.Collapsed;
+            ContentGrid.Effect = null;
+        }
+    }
+
     private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is not true) return;
+
+        ApplyAppearance();
 
         Opacity = 0;
         CardSlide.Y = 14;
