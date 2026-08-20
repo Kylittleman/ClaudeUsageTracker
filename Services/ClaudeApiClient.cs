@@ -8,7 +8,15 @@ namespace ClaudeUsageTracker.Services;
 
 public sealed class ClaudeSessionExpiredException : Exception
 {
-    public ClaudeSessionExpiredException() : base("The claude.ai session key is missing, invalid, or expired.") { }
+    public HttpStatusCode StatusCode { get; }
+    public string Detail { get; }
+
+    public ClaudeSessionExpiredException(HttpStatusCode statusCode, string detail)
+        : base($"The claude.ai session key was rejected ({(int)statusCode} {statusCode}).")
+    {
+        StatusCode = statusCode;
+        Detail = detail;
+    }
 }
 
 /// <summary>
@@ -27,6 +35,15 @@ public sealed class ClaudeApiClient : IDisposable
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://claude.ai");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://claude.ai/");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Chromium\";v=\"126\", \"Not.A/Brand\";v=\"24\", \"Google Chrome\";v=\"126\"");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-site", "same-origin");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-mode", "cors");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("sec-fetch-dest", "empty");
     }
 
     public async Task<IReadOnlyList<Organization>> DiscoverOrganizationsAsync(string sessionKey, CancellationToken ct = default)
@@ -68,16 +85,30 @@ public sealed class ClaudeApiClient : IDisposable
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string sessionKey, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(method, url);
-        request.Headers.Add("Cookie", $"sessionKey={sessionKey}");
+        request.Headers.TryAddWithoutValidation("Cookie", $"sessionKey={sessionKey}");
 
         var response = await _http.SendAsync(request, ct);
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        if (!response.IsSuccessStatusCode)
         {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var snippet = body.Length > 300 ? body[..300] : body;
+
+            if (LooksLikeBotChallenge(body))
+                snippet = "(claude.ai returned a bot-check/challenge page instead of JSON - this is not a rejected key, it's the request being blocked before it reached the API.) " + snippet;
+
             response.Dispose();
-            throw new ClaudeSessionExpiredException();
+            throw new ClaudeSessionExpiredException(response.StatusCode, snippet);
         }
-        response.EnsureSuccessStatusCode();
         return response;
+    }
+
+    private static bool LooksLikeBotChallenge(string body)
+    {
+        var lower = body.ToLowerInvariant();
+        return lower.Contains("cf-browser-verification")
+            || lower.Contains("just a moment")
+            || lower.Contains("attention required")
+            || lower.Contains("<html");
     }
 
     private static UsageWindow ParseWindow(JsonElement root, string propertyName)

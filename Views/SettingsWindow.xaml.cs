@@ -79,10 +79,10 @@ public partial class SettingsWindow : Window
                 StatusMessage.Text = "Session key worked but no organizations were found.";
             }
         }
-        catch (ClaudeSessionExpiredException)
+        catch (ClaudeSessionExpiredException ex)
         {
             StatusMessage.Foreground = Brushes.Red;
-            StatusMessage.Text = "That session key was rejected (expired or invalid).";
+            StatusMessage.Text = $"Rejected ({(int)ex.StatusCode} {ex.StatusCode}): {ex.Detail}";
         }
         catch (Exception ex)
         {
