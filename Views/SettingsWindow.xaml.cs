@@ -61,8 +61,11 @@ public partial class SettingsWindow : Window
 
     private async void LoginButton_Click(object sender, RoutedEventArgs e)
     {
+        DebugLog.Write("SettingsWindow: LoginButton_Click, creating LoginWindow");
         var loginWindow = new LoginWindow { Owner = this };
+        DebugLog.Write("SettingsWindow: calling ShowDialog");
         loginWindow.ShowDialog();
+        DebugLog.Write("SettingsWindow: ShowDialog returned");
 
         await RefreshLoginStatusAsync();
     }

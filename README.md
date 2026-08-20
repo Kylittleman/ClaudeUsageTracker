@@ -73,6 +73,13 @@ Produces the same kind of single self-contained `ClaudeUsageTracker.exe` attache
 [Releases](https://github.com/Kylittleman/ClaudeUsageTracker/releases) - runs without the
 .NET SDK/runtime installed. Not checked into this repo; build it yourself or grab the release.
 
+## Troubleshooting
+
+If the login window opens and then closes on its own without you finishing sign-in, or
+Settings won't show you as logged in, check `%TEMP%\ClaudeUsageTrackerDebug.log` - it logs
+each step of the login flow (cookie names only, never values) and will usually show exactly
+where it stopped.
+
 ## Privacy
 
 This app only talks to `claude.ai` (through the embedded browser component) and nowhere else.
