@@ -134,6 +134,7 @@ public partial class SettingsWindow : Window
         _settings.AutoStart = AutoStartCheck.IsChecked == true;
         _settings.NotifyAtThresholds = NotifyCheck.IsChecked == true;
         _store.Save(_settings);
+        DebugLog.Write($"SettingsWindow: saved org={_settings.OrganizationId} ({_settings.OrganizationName}), interval={_settings.RefreshIntervalSeconds}s, autoStart={_settings.AutoStart}");
 
         AutoStartManager.SetEnabled(_settings.AutoStart);
 

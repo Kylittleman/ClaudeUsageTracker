@@ -70,19 +70,26 @@ public sealed class UsagePoller : IDisposable
     {
         var settings = _store.Load();
         if (string.IsNullOrEmpty(settings.OrganizationId))
+        {
+            DebugLog.Write("UsagePoller: no OrganizationId configured, skipping poll");
             return;
+        }
 
         try
         {
+            DebugLog.Write($"UsagePoller: polling org {settings.OrganizationId}");
             var snapshot = await _client.GetUsageAsync(settings.OrganizationId, ct);
+            DebugLog.Write($"UsagePoller: got snapshot 5h={snapshot.FiveHour.UtilizationPct} 7d={snapshot.SevenDay.UtilizationPct} 7dOpus={snapshot.SevenDayOpus.UtilizationPct}");
             SnapshotReceived?.Invoke(this, snapshot);
         }
-        catch (ClaudeSessionExpiredException)
+        catch (ClaudeSessionExpiredException ex)
         {
+            DebugLog.Write($"UsagePoller: SessionExpired - {ex.Message}");
             SessionExpired?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            DebugLog.Write($"UsagePoller: ERROR - {ex}");
             Error?.Invoke(this, ex);
         }
     }

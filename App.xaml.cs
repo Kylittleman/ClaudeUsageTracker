@@ -117,6 +117,7 @@ public partial class App : Application
         var settingsWindow = new SettingsWindow(_store, _client);
         settingsWindow.SettingsSaved += (_, _) =>
         {
+            DebugLog.Write("App: SettingsSaved fired, restarting poller and refreshing now");
             _poller.Start();
             _ = _poller.RefreshNowAsync();
         };
@@ -127,6 +128,7 @@ public partial class App : Application
     {
         Dispatcher.Invoke(() =>
         {
+            DebugLog.Write($"App: OnSnapshotReceived, updating tray icon to {(int)Math.Round(snapshot.FiveHour.UtilizationPct)}%");
             _popup?.ShowSnapshot(snapshot);
             SetTrayIcon(TrayIconRenderer.Render((int)Math.Round(snapshot.FiveHour.UtilizationPct)));
             if (_trayIcon is not null)
@@ -161,6 +163,7 @@ public partial class App : Application
 
     private void OnSessionExpired(object? sender, EventArgs e)
     {
+        DebugLog.Write("App: OnSessionExpired");
         Dispatcher.Invoke(() =>
         {
             _popup?.ShowSessionExpired();
@@ -170,6 +173,7 @@ public partial class App : Application
 
     private void OnPollerError(object? sender, Exception ex)
     {
+        DebugLog.Write($"App: OnPollerError - {ex}");
         Dispatcher.Invoke(() =>
         {
             _popup?.ShowError("Couldn't reach claude.ai. Will retry automatically.");

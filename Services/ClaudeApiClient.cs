@@ -91,15 +91,19 @@ public sealed class ClaudeApiClient : IAsyncDisposable
 
     private async Task<string> FetchJsonTextAsync(string url, CancellationToken ct)
     {
+        DebugLog.Write($"ClaudeApiClient: fetching {url}");
         await InitializeAsync();
         await _navLock.WaitAsync(ct);
         try
         {
             await NavigateAsync(url, ct);
+            DebugLog.Write($"ClaudeApiClient: navigation completed for {url}");
 
             for (var attempt = 0; attempt < 6; attempt++)
             {
                 var text = await GetBodyTextAsync();
+                var preview = text.Length > 120 ? text[..120] : text;
+                DebugLog.Write($"ClaudeApiClient: attempt {attempt}, looksLikeJson={LooksLikeJson(text)}, preview=[{preview}]");
                 if (LooksLikeJson(text))
                     return text;
 
@@ -108,6 +112,7 @@ public sealed class ClaudeApiClient : IAsyncDisposable
                 await Task.Delay(1000, ct);
             }
 
+            DebugLog.Write($"ClaudeApiClient: gave up on {url} after 6 attempts, no JSON");
             throw new ClaudeSessionExpiredException(
                 "claude.ai kept returning a non-JSON (bot-check or login) page instead of usage data. Try logging in again.");
         }
