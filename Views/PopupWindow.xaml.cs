@@ -29,7 +29,7 @@ public partial class PopupWindow : Window
 
     public void ShowUnconfigured()
     {
-        StatusText.Text = "Not logged in. Click the gear icon to log in with claude.ai.";
+        SetStatus("Not logged in. Click the gear icon to log in with claude.ai.");
         FiveHourPctText.Text = "-";
         SevenDayPctText.Text = "-";
         AnimateBar(FiveHourFill, 0);
@@ -38,19 +38,13 @@ public partial class PopupWindow : Window
         SevenDayResetText.Text = "";
     }
 
-    public void ShowSessionExpired()
-    {
-        StatusText.Text = "Session expired. Click the gear icon to log in again.";
-    }
+    public void ShowSessionExpired() => SetStatus("Session expired. Click the gear icon to log in again.");
 
-    public void ShowError(string message)
-    {
-        StatusText.Text = message;
-    }
+    public void ShowError(string message) => SetStatus(message);
 
     public void ShowSnapshot(UsageSnapshot snapshot)
     {
-        StatusText.Text = "";
+        SetStatus("");
 
         FiveHourPctText.Text = $"{snapshot.FiveHour.UtilizationPct:0}%";
         AnimateBar(FiveHourFill, snapshot.FiveHour.UtilizationPct);
@@ -59,6 +53,14 @@ public partial class PopupWindow : Window
         SevenDayPctText.Text = $"{snapshot.SevenDay.UtilizationPct:0}%";
         AnimateBar(SevenDayFill, snapshot.SevenDay.UtilizationPct);
         SevenDayResetText.Text = FormatReset(snapshot.SevenDay.ResetAt);
+    }
+
+    private void SetStatus(string message)
+    {
+        StatusText.Text = message;
+        // Collapse entirely rather than leaving an empty line's worth of reserved space -
+        // otherwise the bottom of the card carries visibly more whitespace than the top.
+        StatusText.Visibility = string.IsNullOrEmpty(message) ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private static void AnimateBar(FrameworkElement fill, double pct)
@@ -120,46 +122,49 @@ public partial class PopupWindow : Window
     }
 
     /// <summary>
-    /// "Clear" is a deliberately different visual language from "Solid", not just a lower-alpha
-    /// version of it: a truly see-through surface can land over any arbitrary desktop content,
-    /// so it can't rely on the comfortable light/dark theme-matched text contrast Solid mode
-    /// gets from its near-opaque tint. Clear mode instead uses a fixed white-text-with-shadow
-    /// treatment (the same trick game overlays and photo-widget UIs use for legibility over
-    /// unknown backgrounds), a brighter rim to define the otherwise-invisible edge, and a top
-    /// highlight gradient suggesting light catching a curved glass surface.
+    /// Color (White/Black) and Style (Solid/Clear) are independent choices, not a single
+    /// light/dark-follows-Windows-theme toggle - a truly see-through Clear card can land over
+    /// any arbitrary desktop content, so at low opacity even a "Black" tint can visually read as
+    /// washed-out/light if what's behind it is bright. Making both axes explicit and
+    /// user-controlled avoids that ambiguity entirely. The border and all text use the same
+    /// "ink" color as a simple, consistent rule; Clear mode additionally gets a drop shadow in
+    /// the opposite tone for legibility over unknown backgrounds, and a top highlight gradient
+    /// suggesting light catching a curved glass surface.
     /// </summary>
     private void ApplyAppearance()
     {
-        var clear = _store.Load().ClearGlassMode;
+        var settings = _store.Load();
+        var isLight = settings.PopupLightColor;
+        var isClear = settings.ClearGlassMode;
 
-        if (clear)
+        var ink = isLight ? Colors.Black : Colors.White;
+        var inkInverse = isLight ? Colors.White : Colors.Black;
+
+        Resources["PrimaryTextBrush"] = new SolidColorBrush(ink);
+        Resources["SecondaryTextBrush"] = new SolidColorBrush(Color.FromArgb(isClear ? (byte)204 : (byte)179, ink.R, ink.G, ink.B));
+        Resources["TertiaryTextBrush"] = new SolidColorBrush(Color.FromArgb(isClear ? (byte)195 : (byte)115, ink.R, ink.G, ink.B));
+        Resources["TrackBrush"] = new SolidColorBrush(Color.FromArgb(isClear ? (byte)46 : (byte)32, ink.R, ink.G, ink.B));
+
+        if (isClear)
         {
-            Resources["PrimaryTextBrush"] = Brushes.White;
-            Resources["SecondaryTextBrush"] = new SolidColorBrush(Color.FromArgb(204, 255, 255, 255));
-            Resources["TertiaryTextBrush"] = new SolidColorBrush(Color.FromArgb(140, 255, 255, 255));
-            Resources["TrackBrush"] = new SolidColorBrush(Color.FromArgb(46, 255, 255, 255));
-
-            GlassCard.Background = new SolidColorBrush(Color.FromArgb(34, 0, 0, 0));
-            GlassCard.BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255));
+            GlassCard.Background = new SolidColorBrush(Color.FromArgb(34, inkInverse.R, inkInverse.G, inkInverse.B));
+            GlassCard.BorderBrush = new SolidColorBrush(Color.FromArgb(90, ink.R, ink.G, ink.B));
             HighlightOverlay.Visibility = Visibility.Visible;
-            ContentGrid.Effect = new DropShadowEffect
-            {
-                Color = Colors.Black,
-                BlurRadius = 6,
-                ShadowDepth = 1,
-                Direction = 270,
-                Opacity = 0.6,
-            };
+            // Dark text over a translucent white tint needs a much stronger halo than light text
+            // over a dark tint does - black has less inherent "pop" against an unpredictable
+            // desktop behind it, so White+Clear gets a tighter, fully-opaque, non-directional
+            // glow (ShadowDepth 0 = symmetric outline) rather than the softer offset shadow that
+            // already reads fine for white text.
+            ContentGrid.Effect = isLight
+                ? new DropShadowEffect { Color = inkInverse, BlurRadius = 4, ShadowDepth = 0, Opacity = 1.0 }
+                : new DropShadowEffect { Color = inkInverse, BlurRadius = 6, ShadowDepth = 1, Direction = 270, Opacity = 0.6 };
         }
         else
         {
-            Resources.Remove("PrimaryTextBrush");
-            Resources.Remove("SecondaryTextBrush");
-            Resources.Remove("TertiaryTextBrush");
-            Resources.Remove("TrackBrush");
-
-            GlassCard.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "GlassOverlayBrush");
-            GlassCard.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "BorderBrush2");
+            GlassCard.Background = new SolidColorBrush(isLight
+                ? Color.FromArgb(192, 255, 255, 255)
+                : Color.FromArgb(176, 20, 20, 25));
+            GlassCard.BorderBrush = new SolidColorBrush(Color.FromArgb(isLight ? (byte)26 : (byte)31, ink.R, ink.G, ink.B));
             HighlightOverlay.Visibility = Visibility.Collapsed;
             ContentGrid.Effect = null;
         }

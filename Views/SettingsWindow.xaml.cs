@@ -27,6 +27,8 @@ public partial class SettingsWindow : Window
         NotifyCheck.IsChecked = _settings.NotifyAtThresholds;
         ClearStyleRadio.IsChecked = _settings.ClearGlassMode;
         SolidStyleRadio.IsChecked = !_settings.ClearGlassMode;
+        WhiteColorRadio.IsChecked = _settings.PopupLightColor;
+        BlackColorRadio.IsChecked = !_settings.PopupLightColor;
 
         if (!string.IsNullOrEmpty(_settings.OrganizationId))
         {
@@ -136,6 +138,7 @@ public partial class SettingsWindow : Window
         _settings.AutoStart = AutoStartCheck.IsChecked == true;
         _settings.NotifyAtThresholds = NotifyCheck.IsChecked == true;
         _settings.ClearGlassMode = ClearStyleRadio.IsChecked == true;
+        _settings.PopupLightColor = WhiteColorRadio.IsChecked == true;
         _store.Save(_settings);
         DebugLog.Write($"SettingsWindow: saved org={_settings.OrganizationId} ({_settings.OrganizationName}), interval={_settings.RefreshIntervalSeconds}s, autoStart={_settings.AutoStart}");
 

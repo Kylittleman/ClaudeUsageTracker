@@ -159,9 +159,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Grid Width="18" Height="18" VerticalAlignment="Center">
-                            <Ellipse x:Name="Ring" Stroke="{DynamicResource BorderBrush2}" StrokeThickness="1.5"/>
+                            <Ellipse x:Name="Ring" Fill="Transparent" Stroke="{DynamicResource BorderBrush2}" StrokeThickness="1.5"/>
                             <Ellipse x:Name="Dot" Width="9" Height="9" Fill="{StaticResource AccentBrush}" Opacity="0"/>
                         </Grid>
                         <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>

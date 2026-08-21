@@ -44,12 +44,26 @@
 
         <TextBlock Grid.Row="4" Text="APPEARANCE" FontSize="11" FontWeight="SemiBold"
                    Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,0,0,10"/>
-        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,26">
-            <RadioButton x:Name="SolidStyleRadio" Content="Solid" GroupName="Style"
-                         Style="{StaticResource ModernRadioButtonStyle}" Margin="0,0,28,0"/>
-            <RadioButton x:Name="ClearStyleRadio" Content="Clear (see-through)" GroupName="Style"
-                         Style="{StaticResource ModernRadioButtonStyle}"/>
-        </StackPanel>
+        <Grid Grid.Row="5" Margin="0,0,0,26">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Color" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                <RadioButton x:Name="WhiteColorRadio" Content="White" GroupName="Color"
+                             Style="{StaticResource ModernRadioButtonStyle}" Margin="0,0,0,12"/>
+                <RadioButton x:Name="BlackColorRadio" Content="Black" GroupName="Color"
+                             Style="{StaticResource ModernRadioButtonStyle}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Style" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                <RadioButton x:Name="SolidStyleRadio" Content="Solid" GroupName="Style"
+                             Style="{StaticResource ModernRadioButtonStyle}" Margin="0,0,0,12"/>
+                <RadioButton x:Name="ClearStyleRadio" Content="Clear (see-through)" GroupName="Style"
+                             Style="{StaticResource ModernRadioButtonStyle}"/>
+            </StackPanel>
+        </Grid>
 
         <TextBlock Grid.Row="6" Text="REFRESH INTERVAL (SECONDS, WHILE ACTIVE)" FontSize="11" FontWeight="SemiBold"
                    Foreground="{DynamicResource TertiaryTextBrush}" Margin="0,0,0,10"/>
