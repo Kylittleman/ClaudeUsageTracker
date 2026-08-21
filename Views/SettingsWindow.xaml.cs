@@ -29,6 +29,10 @@ public partial class SettingsWindow : Window
         SolidStyleRadio.IsChecked = !_settings.ClearGlassMode;
         WhiteColorRadio.IsChecked = _settings.PopupLightColor;
         BlackColorRadio.IsChecked = !_settings.PopupLightColor;
+        ApplyPreviewTheme(_settings.PopupLightColor);
+
+        WhiteColorRadio.Checked += (_, _) => ApplyPreviewTheme(true);
+        BlackColorRadio.Checked += (_, _) => ApplyPreviewTheme(false);
 
         if (!string.IsNullOrEmpty(_settings.OrganizationId))
         {
@@ -41,6 +45,37 @@ public partial class SettingsWindow : Window
         }
 
         Loaded += async (_, _) => await RefreshLoginStatusAsync();
+    }
+
+    /// <summary>
+    /// Live-previews the White/Black color choice on the Settings window itself the instant you
+    /// pick it, instead of only applying it to the popup after Save - so you can actually see
+    /// what you're choosing. Overrides the same DynamicResource keys the window's own controls
+    /// are already bound to (matches DarkTheme.xaml/LightTheme.xaml exactly), the same technique
+    /// PopupWindow uses for its own appearance switching.
+    /// </summary>
+    private void ApplyPreviewTheme(bool isLight)
+    {
+        if (isLight)
+        {
+            Resources["SolidWindowBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0xF7, 0xF7, 0xF8));
+            Resources["PrimaryTextBrush"] = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+            Resources["SecondaryTextBrush"] = new SolidColorBrush(Color.FromArgb(179, 0, 0, 0));
+            Resources["TertiaryTextBrush"] = new SolidColorBrush(Color.FromArgb(115, 0, 0, 0));
+            Resources["BorderBrush2"] = new SolidColorBrush(Color.FromArgb(26, 0, 0, 0));
+            Resources["ControlBackgroundBrush"] = new SolidColorBrush(Color.FromArgb(13, 0, 0, 0));
+            Resources["HoverBrush"] = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0));
+        }
+        else
+        {
+            Resources["SolidWindowBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x24));
+            Resources["PrimaryTextBrush"] = Brushes.White;
+            Resources["SecondaryTextBrush"] = new SolidColorBrush(Color.FromArgb(179, 255, 255, 255));
+            Resources["TertiaryTextBrush"] = new SolidColorBrush(Color.FromArgb(115, 255, 255, 255));
+            Resources["BorderBrush2"] = new SolidColorBrush(Color.FromArgb(31, 255, 255, 255));
+            Resources["ControlBackgroundBrush"] = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+            Resources["HoverBrush"] = new SolidColorBrush(Color.FromArgb(26, 255, 255, 255));
+        }
     }
 
     private async Task RefreshLoginStatusAsync()
