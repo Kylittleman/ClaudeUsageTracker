@@ -1,7 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 using ClaudeUsageTracker.Models;
 using ClaudeUsageTracker.Services;
 
@@ -127,9 +126,8 @@ public partial class PopupWindow : Window
     /// any arbitrary desktop content, so at low opacity even a "Black" tint can visually read as
     /// washed-out/light if what's behind it is bright. Making both axes explicit and
     /// user-controlled avoids that ambiguity entirely. The border and all text use the same
-    /// "ink" color as a simple, consistent rule; Clear mode additionally gets a drop shadow in
-    /// the opposite tone for legibility over unknown backgrounds, and a top highlight gradient
-    /// suggesting light catching a curved glass surface.
+    /// "ink" color as a simple, consistent rule. Deliberately no Effect/shadow on the text itself
+    /// (see the note in the Clear branch below) - text stays crisp always.
     /// </summary>
     private void ApplyAppearance()
     {
@@ -150,14 +148,11 @@ public partial class PopupWindow : Window
             GlassCard.Background = new SolidColorBrush(Color.FromArgb(34, inkInverse.R, inkInverse.G, inkInverse.B));
             GlassCard.BorderBrush = new SolidColorBrush(Color.FromArgb(90, ink.R, ink.G, ink.B));
             HighlightOverlay.Visibility = Visibility.Visible;
-            // Dark text over a translucent white tint needs a much stronger halo than light text
-            // over a dark tint does - black has less inherent "pop" against an unpredictable
-            // desktop behind it, so White+Clear gets a tighter, fully-opaque, non-directional
-            // glow (ShadowDepth 0 = symmetric outline) rather than the softer offset shadow that
-            // already reads fine for white text.
-            ContentGrid.Effect = isLight
-                ? new DropShadowEffect { Color = inkInverse, BlurRadius = 4, ShadowDepth = 0, Opacity = 1.0 }
-                : new DropShadowEffect { Color = inkInverse, BlurRadius = 6, ShadowDepth = 1, Direction = 270, Opacity = 0.6 };
+            // No DropShadowEffect here on purpose: applying any Effect to a Grid containing text
+            // forces WPF to rasterize that whole subtree, which loses the crisp ClearType text
+            // rendering pipeline and makes text look soft/blurry - noticeably worse than the
+            // legibility problem it was meant to solve.
+            ContentGrid.Effect = null;
         }
         else
         {
