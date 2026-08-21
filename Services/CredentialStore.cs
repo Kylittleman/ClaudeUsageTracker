@@ -12,6 +12,8 @@ public sealed class AppSettings
     public bool NotifyAtThresholds { get; set; } = true;
     public bool PinPopup { get; set; } = false;
     public bool ClearGlassMode { get; set; } = false;
+    public double? PopupLeft { get; set; }
+    public double? PopupTop { get; set; }
 }
 
 /// <summary>

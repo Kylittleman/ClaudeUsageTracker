@@ -36,7 +36,6 @@ public partial class PopupWindow : Window
         AnimateBar(SevenDayFill, 0);
         FiveHourResetText.Text = "";
         SevenDayResetText.Text = "";
-        LastRefreshedText.Text = "";
     }
 
     public void ShowSessionExpired()
@@ -60,8 +59,6 @@ public partial class PopupWindow : Window
         SevenDayPctText.Text = $"{snapshot.SevenDay.UtilizationPct:0}%";
         AnimateBar(SevenDayFill, snapshot.SevenDay.UtilizationPct);
         SevenDayResetText.Text = FormatReset(snapshot.SevenDay.ResetAt);
-
-        LastRefreshedText.Text = $"Last updated {snapshot.LastRefreshed:t}";
     }
 
     private static void AnimateBar(FrameworkElement fill, double pct)
@@ -100,6 +97,26 @@ public partial class PopupWindow : Window
     private void Window_Deactivated(object? sender, EventArgs e)
     {
         if (!_isPinned) Hide();
+    }
+
+    private void HeaderPanel_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
+
+        try
+        {
+            DragMove();
+        }
+        catch (InvalidOperationException)
+        {
+            return; // mouse was released before the drag operation could start
+        }
+
+        var settings = _store.Load();
+        settings.PopupLeft = Left;
+        settings.PopupTop = Top;
+        _store.Save(settings);
+        DebugLog.Write($"PopupWindow: dragged to Left={Left}, Top={Top}");
     }
 
     /// <summary>

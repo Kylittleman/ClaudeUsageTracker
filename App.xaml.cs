@@ -120,9 +120,32 @@ public partial class App : Application
     private void PositionPopupNearTray()
     {
         if (_popup is null) return;
+
+        var settings = _store.Load();
+        if (settings.PopupLeft is double left && settings.PopupTop is double top && IsPositionOnScreen(left, top))
+        {
+            _popup.Left = left;
+            _popup.Top = top;
+            return;
+        }
+
         var workArea = SystemParameters.WorkArea;
         _popup.Left = workArea.Right - _popup.Width - 12;
         _popup.Top = workArea.Bottom - _popup.Height - 12;
+    }
+
+    /// <summary>
+    /// Guards against a saved drag position becoming unreachable - e.g. a second monitor it was
+    /// dragged onto gets disconnected later - by falling back to the default corner instead of
+    /// showing the popup somewhere the user can no longer see or reach it.
+    /// </summary>
+    private static bool IsPositionOnScreen(double left, double top)
+    {
+        const double margin = 50; // a sliver on-screen still counts as reachable
+        return left > SystemParameters.VirtualScreenLeft - margin
+            && left < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth
+            && top > SystemParameters.VirtualScreenTop - margin
+            && top < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
     }
 
     private void OpenSettings()
